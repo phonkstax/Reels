@@ -1,27 +1,22 @@
-name: Reels Automation - Daily Check
-
+name: Phonkstax Reel Engine
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 0 * * *' # Runs daily at midnight
 
 jobs:
-  run-logic:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Setup Tools
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg jq bc
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
 
-      - name: Install Dependencies
-        run: pip install requests
-
-      - name: Execute Check Script
-        id: logic
+      - name: Check Notion
+        id: check
         env:
           YTM_CLIENT_ID: ${{ secrets.YTM_CLIENT_ID }}
           YTM_CLIENT_SECRET: ${{ secrets.YTM_CLIENT_SECRET }}
@@ -29,9 +24,15 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: python check_and_process.py
 
-      - name: Handle New Video
-        if: steps.logic.outputs.exists == 'false'
+      - name: Render Reel
+        if: steps.check.outputs.exists == 'false'
         run: |
-          echo "Processing: ${{ steps.logic.outputs.title }}"
-          echo "Video ID: ${{ steps.logic.outputs.video_id }}"
-          # Trigger your render or posting workflow here
+          chmod +x render_reel.sh
+          ./render_reel.sh
+
+      - name: Upload
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.check.outputs.title }}
+          path: output.mp4
