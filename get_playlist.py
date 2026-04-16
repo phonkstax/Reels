@@ -1,30 +1,45 @@
-import subprocess
+import os
+import requests
 import json
 
-def get_playlist_items(playlist_url):
-    # We tell yt-dlp to give us the 'id' (video) AND the 'playlist_id' (internal entry ID)
-    command = [
-        "yt-dlp", 
-        "--flat-playlist", 
-        "--dump-single-json", 
-        playlist_url
-    ]
-    
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode != 0:
-        return
+# Your Playlist ID
+PLAYLIST_ID = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
 
-    data = json.loads(result.stdout)
+def get_access_token():
+    # Uses your stored secrets to get a fresh 1-hour session
+    url = "https://oauth2.googleapis.com/token"
+    oauth_data = json.loads(os.environ['YTM_OAUTH_JSON'])
+    payload = {
+        "client_id": os.environ['YTM_CLIENT_ID'],
+        "client_secret": os.environ['YTM_CLIENT_SECRET'],
+        "refresh_token": oauth_data['refresh_token'],
+        "grant_type": "refresh_token"
+    }
+    r = requests.post(url, data=payload)
+    return r.json().get('access_token')
+
+def list_items():
+    token = get_access_token()
+    # Official Google API endpoint for playlist items
+    url = f"https://www.googleapis.com/youtube/v3/playlistItems"
+    params = {
+        "part": "snippet,contentDetails",
+        "playlistId": PLAYLIST_ID,
+        "maxResults": 50
+    }
+    headers = {"Authorization": f"Bearer {token}"}
     
-    print(f"--- Playlist: {data.get('title')} ---")
-    for entry in data.get('entries', []):
-        video_id = entry.get('id')
-        # This is the "Secret" ID you need for Make.com or API Deletion
-        playlist_item_id = entry.get('playlist_index_id') or entry.get('id')
-        title = entry.get('title')
+    r = requests.get(url, params=params, headers=headers)
+    data = r.json()
+
+    print(f"--- Playlist Items for {PLAYLIST_ID} ---")
+    for item in data.get('items', []):
+        # THIS IS THE ONE: The real Playlist Item ID for deletion
+        playlist_item_id = item['id']
+        video_id = item['contentDetails']['videoId']
+        title = item['snippet']['title']
         
         print(f"Video ID: {video_id} | Playlist Item ID: {playlist_item_id} | Title: {title}")
 
 if __name__ == "__main__":
-    URL = "https://music.youtube.com/playlist?list=PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
-    get_playlist_items(URL)
+    list_items()
