@@ -50,7 +50,7 @@ def check_notion_entry(video_id):
                 },
                 {
                     "property": "Channel",
-                    "select": {"equals": "phonkstax"}
+                    "Text": {"equals": "phonkstax"}
                 }
             ]
         }
