@@ -16,7 +16,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg jq bc
-          # We only need requests now
+          # Removed yt-dlp to save time and avoid conflicts
           python3 -m pip install requests --break-system-packages
 
       - name: Run Check and Download (Cobalt Bridge)
