@@ -1,42 +1,42 @@
 import os
-import json
 from ytmusicapi import YTMusic, OAuthCredentials
 
 def get_ytm_client():
-    # 1. Reconstruct the oauth.json file from Secret
+    # Load secrets
     oauth_raw = os.environ.get("YTM_OAUTH_JSON")
-    if not oauth_raw:
-        raise ValueError("YTM_OAUTH_JSON secret is missing!")
-    
+    client_id = os.environ.get("YTM_CLIENT_ID")
+    client_secret = os.environ.get("YTM_CLIENT_SECRET")
+
+    # Save to file
     with open("oauth.json", "w") as f:
         f.write(oauth_raw)
 
-    # 2. Setup credentials for automatic refreshing
+    # Initialize OAuth credentials object
     auth = OAuthCredentials(
-        client_id=os.environ.get("YTM_CLIENT_ID"),
-        client_secret=os.environ.get("YTM_CLIENT_SECRET")
+        client_id=client_id,
+        client_secret=client_secret
     )
 
+    # Force initialization with credentials
     return YTMusic("oauth.json", oauth_credentials=auth)
 
 def main():
     yt = get_ytm_client()
     
-    # Replace with your actual Playlist ID 
-    # (The string after 'list=' in the URL)
+    # The clean ID from your URL
     playlist_id = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
     
-    playlist = yt.get_playlist(playlist_id, limit=None)
-    
-    print(f"--- Playlist: {playlist['title']} ---")
-    
-    for track in playlist['tracks']:
-        title = track['title']
-        artist = track['artists'][0]['name'] if track['artists'] else "Unknown"
-        video_id = track['videoId']
+    try:
+        # Some private playlists require the 'limit' to be a number 
+        # rather than None to avoid server-side sorting issues
+        playlist = yt.get_playlist(playlist_id, limit=100)
         
-        # This format is easy to use for further automation (ffmpeg, etc.)
-        print(f"ID: {video_id} | {artist} - {title}")
+        print(f"--- Playlist Found: {playlist['title']} ---")
+        for track in playlist['tracks']:
+            print(f"ID: {track['videoId']} | {track['title']}")
+            
+    except Exception as e:
+        print(f"Error details: {e}")
 
 if __name__ == "__main__":
     main()
