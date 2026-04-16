@@ -2,8 +2,7 @@ name: YouTube Music Sync
 
 on:
   workflow_dispatch: # Allows you to run it manually from the Actions tab
-  Optional: Runs daily at midnight
-
+ 
 jobs:
   ytm-playlist-fetch:
     runs-on: ubuntu-latest
