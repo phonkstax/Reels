@@ -16,8 +16,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg jq bc
-          python3 -m pip install -U yt-dlp requests --break-system-packages
-
+          # Install the latest master version of yt-dlp
+          python3 -m pip install -U https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz requests --break-system-packages
+     
       - name: Check & Download
         id: check
         env:
