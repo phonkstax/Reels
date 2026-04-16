@@ -1,16 +1,36 @@
-name: Manual YTM Fix
+name: YTM Queue Cleanup
 
 on:
+  # Allows you to run it manually from the "Actions" tab
   workflow_dispatch:
+    inputs:
+      video_id:
+        description: 'YouTube Video ID to remove'
+        required: true
+        default: '-oIMyMEvMLI'
 
 jobs:
-  remove-item:
+  cleanup-playlist:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Execute Raw API Call
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Run Removal Script
         env:
+          # Your Google Cloud Credentials
+          YTM_CLIENT_ID: ${{ secrets.YTM_CLIENT_ID }}
+          YTM_CLIENT_SECRET: ${{ secrets.YTM_CLIENT_SECRET }}
+          # The JSON containing your refresh_token
           YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
-        run: bash remove_item.sh
+        # Runs the script using the input ID or the default
+        run: python remove_item.py "${{ github.event.inputs.video_id }}"
