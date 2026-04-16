@@ -1,17 +1,17 @@
 import subprocess
 import json
 
-def get_ytm_playlist(url):
-    # --flat-playlist: Don't resolve every video, just get the list (Fast)
-    # --dump-single-json: Output everything as one JSON object
+def get_playlist_items(playlist_url):
+    # Use yt-dlp to extract playlist metadata as JSON
+    # --flat-playlist: only gets the list, doesn't analyze every video (much faster)
     command = [
-        "yt-dlp",
-        "--flat-playlist",
-        "--dump-single-json",
-        url
+        "yt-dlp", 
+        "--flat-playlist", 
+        "--dump-single-json", 
+        playlist_url
     ]
     
-    print(f"Fetching Unlisted Playlist...")
+    print(f"Fetching items from unlisted playlist...")
     result = subprocess.run(command, capture_output=True, text=True)
     
     if result.returncode != 0:
@@ -20,12 +20,13 @@ def get_ytm_playlist(url):
 
     data = json.loads(result.stdout)
     
-    print(f"\n--- {data.get('title', 'Playlist')} ---")
-    
-    # This extracts the ID and Title for each track
+    print(f"\n--- Playlist: {data.get('title')} ---")
     for entry in data.get('entries', []):
-        print(f"ID: {entry.get('id')} | Title: {entry.get('title')}")
+        video_id = entry.get('id')
+        title = entry.get('title')
+        # This gives you exactly what you need for your Reel automation
+        print(f"ID: {video_id} | Title: {title}")
 
 if __name__ == "__main__":
     PLAYLIST_URL = "https://music.youtube.com/playlist?list=PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
-    get_ytm_playlist(PLAYLIST_URL)
+    get_playlist_items(PLAYLIST_URL)
