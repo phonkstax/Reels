@@ -1,18 +1,80 @@
-name: Get REAL Playlist IDs
+name: Delete YTM Playlist Item
 
 on:
   workflow_dispatch:
+    inputs:
+      playlist_item_id:
+        description: 'The long Item ID starting with UEw...'
+        required: true
+        default: 'UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci5ENUI5OTFCQkYxNDUxQjQ3'
 
 jobs:
-  fetch-ids:
+  delete-item:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Run Script
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Delete Script
         env:
           YTM_CLIENT_ID: ${{ secrets.YTM_CLIENT_ID }}
           YTM_CLIENT_SECRET: ${{ secrets.YTM_CLIENT_SECRET }}
           YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
-        run: python get_playlist.py
+        run: |
+          python - <<EOF
+          import os
+          import requests
+          import json
+          import sys
+
+          def get_access_token():
+              url = "https://oauth2.googleapis.com/token"
+              try:
+                  oauth_data = json.loads(os.environ['YTM_OAUTH_JSON'])
+                  payload = {
+                      "client_id": os.environ['YTM_CLIENT_ID'],
+                      "client_secret": os.environ['YTM_CLIENT_SECRET'],
+                      "refresh_token": oauth_data['refresh_token'],
+                      "grant_type": "refresh_token"
+                  }
+                  r = requests.post(url, data=payload)
+                  r.raise_for_status()
+                  return r.json().get('access_token')
+              except Exception as e:
+                  print(f"Auth Error: {e}")
+                  return None
+
+          def delete_playlist_item(item_id):
+              token = get_access_token()
+              if not token:
+                  sys.exit(1)
+
+              url = "https://www.googleapis.com/youtube/v3/playlistItems"
+              params = {"id": item_id}
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/json"
+              }
+
+              print(f"Attempting to delete item: {item_id}")
+              r = requests.delete(url, params=params, headers=headers)
+
+              if r.status_code == 204:
+                  print("✅ Successfully removed from playlist!")
+              else:
+                  print(f"❌ Failed to delete. Status: {r.status_code}")
+                  print(f"Response: {r.text}")
+                  sys.exit(1)
+
+          if __name__ == "__main__":
+              target_id = "${{ github.event.inputs.playlist_item_id }}"
+              delete_playlist_item(target_id)
+          EOF
