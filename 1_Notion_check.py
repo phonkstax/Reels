@@ -4,10 +4,10 @@ import json
 import sys
 import re
 
-# --- CONFIGURATION ---
-NOTION_DB_ID = "31fb4e9c9ef68068b8edc379332d974f" 
-NOTION_PAGE_ID = "320b4e9c9ef680f3afaaee8b0450203a"
-PLAYLIST_ID = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
+# --- CONFIGURATION (Now pulled from Environment Variables) ---
+NOTION_DB_ID = os.environ.get('NOTION_DB_ID')
+NOTION_PAGE_ID = os.environ.get('NOTION_PAGE_ID')
+PLAYLIST_ID = os.environ.get('PLAYLIST_ID')
 
 def clean_name(text):
     text = re.sub(r'\s*[-–—]\s*Topic\s*$', '', text, flags=re.IGNORECASE)
@@ -32,7 +32,6 @@ def get_yt_token():
         return None
 
 def delete_playlist_item(token, playlist_item_id):
-    """Deletes the item from the YouTube playlist."""
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     headers = {"Authorization": f"Bearer {token}"}
     params = {"id": playlist_item_id}
@@ -43,11 +42,16 @@ def delete_playlist_item(token, playlist_item_id):
         if response.status_code == 204:
             print("✅ Successfully deleted from YouTube Playlist.")
         else:
-            print(f"⚠️ Delete failed. Status: {response.status_code}, Response: {response.text}")
+            print(f"⚠️ Delete failed. Status: {response.status_code}")
     except Exception as e:
         print(f"❌ Error during deletion: {e}")
 
 def check_notion_entry(video_id):
+    # Ensure variables exist
+    if not NOTION_DB_ID or not NOTION_PAGE_ID:
+        print("❌ Error: NOTION_DB_ID or NOTION_PAGE_ID secret is missing.")
+        return False
+
     url = f"https://api.notion.com/v1/databases/{NOTION_DB_ID}/query"
     headers = {
         "Authorization": f"Bearer {os.environ['NOTION_TOKEN']}",
@@ -72,6 +76,11 @@ def check_notion_entry(video_id):
         return False
 
 def main():
+    # Verify Playlist ID exists
+    if not PLAYLIST_ID:
+        print("❌ Error: PLAYLIST_ID secret is missing.")
+        sys.exit(1)
+
     token = get_yt_token()
     if not token: sys.exit(1)
 
@@ -92,14 +101,11 @@ def main():
     # 2. Check Notion
     if check_notion_entry(vid_id):
         print(f"🚩 MATCH FOUND: {vid_id} is already in Notion.")
-        
-        # --- ACTION: DELETE FROM PLAYLIST ---
         delete_playlist_item(token, playlist_item_id)
-        
-        print("⏩ Stopping workflow. Duplicate removed from playlist.")
+        print("⏩ Stopping workflow. Duplicate removed.")
         sys.exit(1)
 
-    # 3. If NEW, continue and save metadata
+    # 3. Process New Track
     raw_artist = item['snippet'].get('videoOwnerChannelTitle', 'Unknown')
     raw_track = item['snippet'].get('title', 'Unknown')
     artist, track = clean_name(raw_artist), clean_name(raw_track)
