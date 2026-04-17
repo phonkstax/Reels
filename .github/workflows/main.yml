@@ -9,6 +9,7 @@ on:
 jobs:
   render-and-upload:
     runs-on: ubuntu-latest
+    timeout-minutes: 15  # Stop the job if it hangs for more than 30 mins
     
     steps:
       - name: 📂 Checkout Repository
