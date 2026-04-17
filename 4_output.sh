@@ -1,34 +1,38 @@
 #!/bin/bash
 
-# --- PATHS ---
+# --- CONFIG ---
 AUDIO="./assets/trim_audio/trim_audio.mp3"
 IMAGE="./assets/image/image.jpg"
 LOGO="./assets/spotify.png"
-FINAL_OUT="./output/output.mp4"
+METADATA="metadata.json"
+OUT_DIR="./output"
 
-mkdir -p ./output
+mkdir -p "$OUT_DIR"
 
-# 1. Verify Audio and Get Exact Duration
-if [ ! -f "$AUDIO" ]; then
-    echo "❌ ERROR: Trimmed audio not found at $AUDIO"
-    exit 1
+# 1. READ METADATA
+# We use jq to extract the artist and track, then replace spaces with underscores for a clean filename
+if [ -f "$METADATA" ]; then
+    ARTIST=$(jq -r '.artist // "Artist"' "$METADATA" | tr ' ' '_')
+    TRACK=$(jq -r '.track // "Track"' "$METADATA" | tr ' ' '_')
+    FILENAME="${ARTIST}_-_${TRACK}.mp4"
+else
+    FILENAME="output.mp4"
 fi
 
-# Get duration using ffprobe (e.g., 20.04)
-DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$AUDIO")
+FINAL_OUT="$OUT_DIR/$FILENAME"
 
-# 2. AUTO-CALCULATE TIMINGS
-# logo_start = middle of the video
+# 2. VERIFY ASSETS
+if [ ! -f "$AUDIO" ]; then echo "❌ Missing audio"; exit 1; fi
+
+# 3. AUTO-CALCULATE TIMINGS
+DURATION=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$AUDIO")
 LOGO_START=$(echo "$DURATION / 2" | bc -l)
-# fade_out = 2 seconds before the end
 FADE_OUT=$(echo "$DURATION - 2" | bc -l)
 
-echo "🎬 Rendering Reel..."
-echo "⏱️ Total Duration: $DURATION"
-echo "🎨 Logo Start: $LOGO_START | Fade Out: $FADE_OUT"
+echo "🎬 Rendering: $FILENAME"
+echo "⏱️ Duration: $DURATION | Logo at: $LOGO_START"
 
-# 3. RENDER ENGINE
-# We use -t $DURATION at the input level to prevent the infinite loop bug
+# 4. RENDER ENGINE
 ffmpeg -y \
 -t "$DURATION" -loop 1 -i "$IMAGE" \
 -t "$DURATION" -i "$AUDIO" \
