@@ -1,0 +1,87 @@
+name: Phonkstax Reel Engine
+
+on:
+  workflow_dispatch: # Manual trigger for testing
+
+# Grant permissions to write files and create releases
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build-and-render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Environment
+        run: |
+          # Install Rclone and FFmpeg
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          sudo -v && curl https://rclone.org/install.sh | sudo bash
+
+      - name: Configure PikPak
+        env:
+          PIKPAK_USER: ${{ secrets.PIKPAK_USER }}
+          PIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
+        run: |
+          rclone config create mypikpak pikpak user "$PIKPAK_USER" pass "$PIKPAK_PASS"
+          # Initial handshake to get tokens
+          rclone lsf mypikpak: --max-depth 1
+
+      - name: Run Download & Metadata Logic
+        id: download
+        run: |
+          # This runs the Python script we built. 
+          # Ensure pikpak_full_test.py is in your root folder.
+          python render.py
+
+      - name: Render Reel (FFmpeg)
+        run: |
+          # Find the downloaded file in ./output/ (usually .webm)
+          INPUT_FILE=$(ls ./output/*.webm | head -n 1)
+          OUTPUT_FILE="./output/final_reel.mp4"
+          
+          echo "🎬 Rendering $INPUT_FILE to $OUTPUT_FILE..."
+          
+          ffmpeg -y -i "$INPUT_FILE" \
+            -vf "scale=-1:1920,crop=1080:1920,setsar=1" \
+            -c:v libx264 -preset veryfast -crf 18 \
+            -c:a aac -b:a 192k \
+            "$OUTPUT_FILE"
+
+      - name: Save Metadata JSON
+        run: |
+          # Create a summary of this run
+          echo '{
+            "project": "phonkstax",
+            "render_date": "'$(date)'",
+            "input": "X-BREAK.webm",
+            "output": "final_reel.mp4",
+            "status": "published"
+          }' > ./output/metadata.json
+
+      - name: Commit & Push to Repo
+        run: |
+          git config --global user.name "Phonkstax-Bot"
+          git config --global user.email "bot@phonkstax.com"
+          git add output/
+          # Only commit if changes exist
+          git diff --staged --quiet || (git commit -m "🔥 New Reel: X-BREAK" && git push)
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "v${{ github.run_number }}"
+          name: "Phonkstax Release #${{ github.run_number }}"
+          body: "Automated Phonk Reel generated from YouTube via PikPak Bridge."
+          files: |
+            output/final_reel.mp4
+            output/metadata.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
