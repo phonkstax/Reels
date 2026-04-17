@@ -57,16 +57,17 @@ def main():
     items = r.get('items', [])
     if not items:
         print("❌ Playlist is empty.")
-        sys.exit(1) # FAIL if nothing to process
+        sys.exit(1)
 
     item = items[0]
+    playlist_item_id = item.get('id') # The unique ID for this item IN the playlist
     snippet = item['snippet']
     vid_id = snippet['resourceId']['videoId']
     
     # 1. Check Notion FIRST
     if check_notion_entry(vid_id):
         print(f"⏩ {vid_id} already exists in Notion. Stopping workflow.")
-        sys.exit(1) # FAIL here so Step 2-5 don't run for no reason
+        sys.exit(1)
 
     # 2. Extract and Clean
     raw_artist = snippet.get('videoOwnerChannelTitle', 'Unknown Artist')
@@ -75,11 +76,12 @@ def main():
     artist = clean_name(raw_artist)
     track = clean_name(raw_track)
 
-    # 3. Save Metadata (Important: artist and track separate for Step 4)
+    # 3. Save Metadata
     metadata = {
         "artist": artist,
         "track": track,
         "video_id": vid_id,
+        "playlist_item_id": playlist_item_id, # Added here
         "yt_url": f"https://www.youtube.com/watch?v={vid_id}"
     }
     
@@ -87,6 +89,7 @@ def main():
         json.dump(metadata, f, indent=4)
     
     print(f"✅ metadata.json created for: {artist} - {track}")
+    print(f"📦 Playlist Item ID: {playlist_item_id}")
 
 if __name__ == "__main__":
     main()
