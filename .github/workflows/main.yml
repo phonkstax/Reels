@@ -45,9 +45,13 @@ jobs:
 
       - name: 📥 Step 2 - Download & Cleanup Assets
         env:
-          PIKPAK_USER: ${{ secrets.PIKPAK_USER }}
-          PIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
-        run: python 2_download_video.py
+          # This creates the 'mypikpak' remote inside the runner's memory
+          RCLONE_CONFIG_MYPIKPAK_TYPE: pikpak
+          RCLONE_CONFIG_MYPIKPAK_USER: ${{ secrets.PIKPAK_USER }}
+          RCLONE_CONFIG_MYPIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
+        run: |
+          # rclone will now find 'mypikpak'
+          python 2_download_video.py
 
       - name: 🔪 Step 3 - Split Audio & Image
         run: bash 3_audio_image_splitter.sh
