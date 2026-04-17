@@ -26,17 +26,21 @@ def get_yt_token():
         return None
 
 def clean_title(artist, track):
-    # 1. Remove " - Topic" from artist name
-    artist = re.sub(r'\s*-\s*Topic\s*$', '', artist, flags=re.IGNORECASE).strip()
-    
-    # 2. Remove "Release - " prefix from track if it exists
+    # 1. Strip "Release - " from the start of the track name
     track = re.sub(r'^Release\s*-\s*', '', track, flags=re.IGNORECASE).strip()
     
-    # 3. Handle cases where the track title already contains the artist
-    if artist.lower() in track.lower():
-        return track.strip()
+    # 2. Clean " - Topic" out of the artist name
+    artist = re.sub(r'\s*-\s*Topic\s*$', '', artist, flags=re.IGNORECASE).strip()
     
-    return f"{artist} - {track.strip()}"
+    # 3. Logic check: If artist is "Various Artists" or generic, just use the track name
+    if artist.lower() in ["various artists", "unknown artist", "youtube"]:
+        return track
+    
+    # 4. If the track title already contains the artist name, don't double it
+    if artist.lower() in track.lower():
+        return track
+        
+    return f"{artist} - {track}"
 
 def check_notion_entry(video_id):
     url = f"https://api.notion.com/v1/databases/{NOTION_DB_ID}/query"
@@ -74,15 +78,15 @@ def main():
     snippet = item['snippet']
     vid_id = snippet['resourceId']['videoId']
     
-    # Get Artist and Track
+    # Extract Artist and Track
     raw_artist = snippet.get('videoOwnerChannelTitle', 'Various Artists')
     raw_track = snippet.get('title', 'Unknown Track')
     
-    # Apply cleaning
+    # Apply the new cleaning logic
     final_title = clean_title(raw_artist, raw_track)
 
     if check_notion_entry(vid_id):
-        print(f"⏩ {vid_id} ({final_title}) already exists in Notion. Skipping.")
+        print(f"⏩ {vid_id} ({final_title}) exists in Notion. Skipping.")
         sys.exit(0)
 
     metadata = {
