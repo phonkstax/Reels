@@ -1,0 +1,61 @@
+name: Phonk Reel Automation
+
+on:
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  render-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 🛠️ Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg jq bc
+
+      - name: 📝 Step 1 - Fetch Metadata from Notion
+        
+        # Ensure NOTION_TOKEN and NOTION_DATABASE_ID are in Secrets
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: 1_Notion_check.py
+
+      - name: ⚙️ Setup Rclone
+        run: |
+          mkdir -p ~/.config/rclone
+          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
+
+      - name: 📥 Step 2 - Download & Cleanup Assets
+        run: python 2_download_video.py
+
+      - name: 🔪 Step 3 - Split Audio & Image
+        run: bash 3_audio_image_splitter.sh
+
+      - name: 🔉 Step 3.5 - Extract Best Part
+        run: python 3.5_trim_audio.py
+
+      - name: 🎬 Step 4 - Render & Webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: |
+          # 1. CLEAN OUTPUT FOLDER: Ensure no old renders exist
+          rm -rf output/
+          mkdir -p output/
+          
+          # 2. RUN RENDER: This will create the new artist_-_track.mp4
+          bash 4_output.sh
+
+      - name: 📦 Archive Final Video (Backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-reels
+          path: output/
