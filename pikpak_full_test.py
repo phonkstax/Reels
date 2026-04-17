@@ -6,7 +6,7 @@ import os
 
 # --- CONFIG ---
 REMOTE = "mypikpak"
-FOLDER = "/R97group/phonkstax/reels/"
+FOLDER = "/Download/temp/"
 VIDEO_URL = "https://www.youtube.com/watch?v=tdocUW4aKnY"
 # --------------
 
