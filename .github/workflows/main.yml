@@ -45,12 +45,18 @@ jobs:
 
       - name: 📥 Step 2 - Download & Cleanup Assets
         env:
-          # This creates the 'mypikpak' remote inside the runner's memory
-          RCLONE_CONFIG_MYPIKPAK_TYPE: pikpak
-          RCLONE_CONFIG_MYPIKPAK_USER: ${{ secrets.PIKPAK_USER }}
-          RCLONE_CONFIG_MYPIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
+          PIKPAK_USER: ${{ secrets.PIKPAK_USER }}
+          PIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
         run: |
-          # rclone will now find 'mypikpak'
+          # 1. Create the remote exactly like your previous working code
+          rclone config create mypikpak pikpak user "$PIKPAK_USER" pass "$PIKPAK_PASS"
+          
+          # 2. Verify it's working
+          echo "🔍 Checking PikPak connection..."
+          rclone lsf mypikpak: --max-depth 1
+          
+          # 3. Run the Python download script
+          # Since rclone just created the config, the Python subprocess will now find 'mypikpak'
           python 2_download_video.py
 
       - name: 🔪 Step 3 - Split Audio & Image
