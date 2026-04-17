@@ -5,25 +5,31 @@ import sys
 
 # --- CONFIG ---
 INPUT_AUDIO = "./assets/audio/audio.mp3"
-TRIM_DIR = "./assets/trim_audio"
-OUTPUT_TRIM = os.path.join(TRIM_DIR, "trim_audio.mp3")
+# Explicitly set the output path as requested
+OUTPUT_PATH = "./assets/trim_audio/trim_audio.mp3"
 CLIP_LEN = 20
-STEP = 4  # Jump 4s for faster analysis
+STEP = 4  # Scans every 4 seconds for faster processing
 
 def find_best_drop(file):
-    # 1. Get total duration
+    # 1. Get total duration to prevent scanning past the end
     probe = subprocess.run([
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
-        "-of", "json", file
+        "ffprobe", "-v", "-8", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", file
     ], capture_output=True, text=True)
-    duration = float(json.loads(probe.stdout)["format"]["duration"])
+    
+    try:
+        duration = float(probe.stdout.strip())
+    except:
+        print("❌ Could not determine audio duration.")
+        return 0
 
-    print(f"🔍 Analyzing {int(duration)}s audio for the best {CLIP_LEN}s drop...")
+    print(f"🔍 Scanning {int(duration)}s audio for the best 20s drop...")
     best_start = 0
-    best_score = -999
+    max_volume = -999
 
-    # 2. Loop to find highest energy snippet
+    # 2. Energy Detection Loop
     for t in range(0, int(duration - CLIP_LEN), STEP):
+        # We analyze a 1s snippet at each interval to identify the 'peak'
         cmd = [
             "ffmpeg", "-ss", str(t), "-t", "1", 
             "-i", file,
@@ -35,49 +41,46 @@ def find_best_drop(file):
         for line in p.stderr.split("\n"):
             if "mean_volume" in line:
                 try:
+                    # Extracts the volume level (e.g., -12.5)
                     score = float(line.split(":")[1].replace(" dB","").strip())
-                    if score > best_score:
-                        best_score = score
+                    if score > max_volume:
+                        max_volume = score
                         best_start = t
                 except:
                     pass
     return best_start
 
 def main():
+    # Ensure input exists
     if not os.path.exists(INPUT_AUDIO):
         print(f"❌ Input missing: {INPUT_AUDIO}")
         sys.exit(1)
 
-    if not os.path.exists(TRIM_DIR):
-        os.makedirs(TRIM_DIR)
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
-    # Find the best part
+    # Calculate best drop
     start_time = find_best_drop(INPUT_AUDIO)
-    print(f"🔥 Best drop starts at {start_time}s. Extracting...")
+    print(f"🔥 Best drop found at {start_time}s. Extracting 20s clip...")
 
-    # Extract the 20s clip
-    # -c copy is used here for instant extraction without quality loss
-    extract_cmd = [
+    # 3. Perform the Trim
+    # We use libmp3lame to ensure a clean re-encode of the 20s section
+    trim_cmd = [
         "ffmpeg", "-y",
         "-ss", str(start_time),
         "-t", str(CLIP_LEN),
         "-i", INPUT_AUDIO,
         "-acodec", "libmp3lame",
-        "-ab", "192k",
-        OUTPUT_TRIM
+        "-b:a", "192k",
+        OUTPUT_PATH
     ]
     
-    subprocess.run(extract_cmd)
-    print(f"✅ Trimmed audio saved to: {OUTPUT_TRIM}")
-
-    # Update metadata so Step 4 knows we are using a 20s base
-    if os.path.exists("metadata.json"):
-        with open("metadata.json", "r") as f:
-            meta = json.load(f)
-        meta["best_start_original"] = start_time
-        meta["is_trimmed"] = True
-        with open("metadata.json", "w") as f:
-            json.dump(meta, f, indent=4)
+    subprocess.run(trim_cmd)
+    
+    if os.path.exists(OUTPUT_PATH):
+        print(f"✅ Trimmed audio saved to: {OUTPUT_PATH}")
+    else:
+        print("❌ Error: Trimmed file was not created.")
 
 if __name__ == "__main__":
     main()
