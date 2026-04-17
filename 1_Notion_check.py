@@ -26,18 +26,20 @@ def get_yt_token():
         return None
 
 def clean_title(artist, track):
-    # 1. Strip "Release - " from the start of the track name
+    # 1. Remove "Release - " or "Release -" from the start of the track
     track = re.sub(r'^Release\s*-\s*', '', track, flags=re.IGNORECASE).strip()
     
-    # 2. Clean " - Topic" out of the artist name
+    # 2. Remove " - Topic" from the artist name
     artist = re.sub(r'\s*-\s*Topic\s*$', '', artist, flags=re.IGNORECASE).strip()
     
-    # 3. Logic check: If artist is "Various Artists" or generic, just use the track name
-    if artist.lower() in ["various artists", "unknown artist", "youtube","Release - Topic"]:
+    # 3. Prevent duplication: 
+    # If the track already contains the artist (e.g., "Artist - Track"), use it.
+    # Otherwise, combine them.
+    if artist.lower() in track.lower():
         return track
     
-    # 4. If the track title already contains the artist name, don't double it
-    if artist.lower() in track.lower():
+    # If the artist is generic, just return the track
+    if artist.lower() in ["various artists", "unknown artist"]:
         return track
         
     return f"{artist} - {track}"
@@ -78,11 +80,10 @@ def main():
     snippet = item['snippet']
     vid_id = snippet['resourceId']['videoId']
     
-    # Extract Artist and Track
-    raw_artist = snippet.get('videoOwnerChannelTitle', 'Various Artists')
-    raw_track = snippet.get('title', 'Unknown Track')
+    # Grab the names
+    raw_artist = snippet.get('videoOwnerChannelTitle', '')
+    raw_track = snippet.get('title', '')
     
-    # Apply the new cleaning logic
     final_title = clean_title(raw_artist, raw_track)
 
     if check_notion_entry(vid_id):
