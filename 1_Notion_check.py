@@ -2,11 +2,19 @@ import os
 import requests
 import json
 import sys
+import re
 
 # Constants from your project
 NOTION_DB_ID = "31fb4e9c9ef68068b8edc379332d974f" 
 NOTION_PAGE_ID = "320b4e9c9ef680f3afaaee8b0450203a"
 PLAYLIST_ID = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
+
+def clean_title(title):
+    # Removes " - Topic" (case insensitive) from the end of the string
+    cleaned = re.sub(r'\s*-\s*Topic\s*$', '', title, flags=re.IGNORECASE)
+    # Fixes potential double spaces or messy line breaks
+    cleaned = " ".join(cleaned.split())
+    return cleaned
 
 def get_yt_token():
     url = "https://oauth2.googleapis.com/token"
@@ -57,24 +65,26 @@ def main():
     item = items[0]
     vid_id = item['snippet']['resourceId']['videoId']
     item_id = item['id']
-    title = item['snippet']['title']
+    raw_title = item['snippet']['title']
+    
+    # Clean the title here
+    final_title = clean_title(raw_title)
 
     if check_notion_entry(vid_id):
         print(f"⏩ {vid_id} exists in Notion. Skipping.")
         sys.exit(0)
 
-    # SUCCESS: Write Metadata
     metadata = {
         "video_id": vid_id,
         "playlist_item_id": item_id,
-        "title": title,
+        "title": final_title,
         "yt_url": f"https://www.youtube.com/watch?v={vid_id}"
     }
     
     with open("metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
     
-    print(f"📝 Metadata saved for: {title}")
+    print(f"📝 Metadata saved for: {final_title}")
 
 if __name__ == "__main__":
     main()
