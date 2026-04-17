@@ -1,5 +1,8 @@
 name: Phonk Reel Automation
 
+permissions:
+  contents: write  # Crucial: Allows the bot to push metadata.json and videos
+
 on:
   workflow_dispatch: # Manual trigger
 
@@ -10,13 +13,14 @@ jobs:
     steps:
       - name: 📂 Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history so push doesn't fail
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # ADD THIS STEP HERE
       - name: 📦 Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -29,34 +33,34 @@ jobs:
           YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: python 1_Notion_check.py
-        
+
+      - name: 📝 Commit and Push Metadata (Early Save)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Use -f in case metadata.json is in .gitignore
+          git add -f metadata.json
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to metadata.json"
+          else
+            git commit -m "Update metadata for new track [skip ci]"
+            git push origin main
+          fi
 
       - name: 🛠️ Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg jq bc
-          # INSTALL RCLONE
           sudo -v && curl https://rclone.org/install.sh | sudo bash
-
-      - name: ⚙️ Setup Rclone
-        run: |
-          mkdir -p ~/.config/rclone
-          echo "${{ secrets.RCLONE_CONFIG }}" > ~/.config/rclone/rclone.conf
 
       - name: 📥 Step 2 - Download & Cleanup Assets
         env:
           PIKPAK_USER: ${{ secrets.PIKPAK_USER }}
           PIKPAK_PASS: ${{ secrets.PIKPAK_PASS }}
         run: |
-          # 1. Create the remote exactly like your previous working code
           rclone config create mypikpak pikpak user "$PIKPAK_USER" pass "$PIKPAK_PASS"
-          
-          # 2. Verify it's working
-          echo "🔍 Checking PikPak connection..."
-          rclone lsf mypikpak: --max-depth 1
-          
-          # 3. Run the Python download script
-          # Since rclone just created the config, the Python subprocess will now find 'mypikpak'
           python 2_download_video.py
 
       - name: 🔪 Step 3 - Split Audio & Image
@@ -67,37 +71,22 @@ jobs:
 
       - name: 🎬 Step 4 - Render Video
         run: |
+          # Fresh output folder
           rm -rf output/
           mkdir -p output/
           bash 4_output.sh
 
-      - name: 🚀 Step 5 - Webhook Upload
+      - name: 🚀 Step 5 - Webhook & Force Push Video
         env:
           WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
-          # Only runs if Step 4 succeeded
+          # This script now handles the Force Push to save space 
+          # AND sends the URL to your Apps Script
           bash 5_webhook.sh
 
-      - name: 📦 Archive Final Video (Backup)
-        if: always() # Still uploads to GitHub even if webhook fails
+      - name: 📦 Archive Final Video (GitHub Artifact)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: generated-reels
           path: output/
-
-      - name: 📝 Commit and Push Metadata
-        run: |
-          # 1. Configure Git
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # 2. Stage the file
-          git add metadata.json
-          
-          # 3. Commit only if there are changes
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "No changes to metadata.json"
-          else
-            git commit -m "Update metadata.json for new track [skip ci]"
-            git push
-          fi
