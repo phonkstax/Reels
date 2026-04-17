@@ -4,16 +4,15 @@ import json
 import sys
 import re
 
-# Constants from your project
 NOTION_DB_ID = "31fb4e9c9ef68068b8edc379332d974f" 
 NOTION_PAGE_ID = "320b4e9c9ef680f3afaaee8b0450203a"
 PLAYLIST_ID = "PL8WGYt2fhenCJnBHFBKqw8SZl-oyO03Ur"
 
 def clean_title(title):
-    # Removes " - Topic" (case insensitive) from the end of the string
-    cleaned = re.sub(r'\s*-\s*Topic\s*$', '', title, flags=re.IGNORECASE)
-    # Fixes potential double spaces or messy line breaks
-    cleaned = " ".join(cleaned.split())
+    # 1. Remove " - Topic" or " (Topic)" anywhere in the string
+    cleaned = re.sub(r'\s*\(?-\s*Topic\)?\s*', '', title, flags=re.IGNORECASE)
+    # 2. If it's "Artist - Track - Topic", this ensures only "Artist - Track" remains
+    cleaned = cleaned.strip()
     return cleaned
 
 def get_yt_token():
@@ -49,34 +48,29 @@ def check_notion_entry(video_id):
 
 def main():
     token = get_yt_token()
-    if not token:
-        print("❌ Auth failed")
-        sys.exit(1)
+    if not token: sys.exit(1)
 
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {"part": "snippet,contentDetails", "playlistId": PLAYLIST_ID, "maxResults": 1}
     r = requests.get(url, params=params, headers={"Authorization": f"Bearer {token}"}).json()
     
     items = r.get('items', [])
-    if not items:
-        print("📭 Playlist empty")
-        sys.exit(0)
+    if not items: sys.exit(0)
 
     item = items[0]
     vid_id = item['snippet']['resourceId']['videoId']
-    item_id = item['id']
     raw_title = item['snippet']['title']
     
-    # Clean the title here
+    # Clean the title
     final_title = clean_title(raw_title)
 
     if check_notion_entry(vid_id):
-        print(f"⏩ {vid_id} exists in Notion. Skipping.")
+        print(f"⏩ {vid_id} exists. Skipping.")
         sys.exit(0)
 
     metadata = {
         "video_id": vid_id,
-        "playlist_item_id": item_id,
+        "playlist_item_id": item['id'],
         "title": final_title,
         "yt_url": f"https://www.youtube.com/watch?v={vid_id}"
     }
@@ -84,7 +78,7 @@ def main():
     with open("metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
     
-    print(f"📝 Metadata saved for: {final_title}")
+    print(f"📝 Metadata saved: {final_title}")
 
 if __name__ == "__main__":
     main()
