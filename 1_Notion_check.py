@@ -13,14 +13,14 @@ def main():
 
     item = items[0]
     
-    # --- THIS IS THE LINE YOU ARE MISSING ---
+    # --- CAPTURE ID ---
     playlist_item_id = item.get('id') 
     
     snippet = item['snippet']
     vid_id = snippet['resourceId']['videoId']
     
     if check_notion_entry(vid_id):
-        print(f"⏩ {vid_id} already exists in Notion. Skipping.")
+        print(f"⏩ {vid_id} already exists in Notion. Stopping workflow.")
         sys.exit(1)
 
     raw_artist = snippet.get('videoOwnerChannelTitle', 'Unknown Artist')
@@ -29,7 +29,7 @@ def main():
     artist = clean_name(raw_artist)
     track = clean_name(raw_track)
 
-    # --- ADD IT TO THE DICTIONARY HERE ---
+    # --- SAVE EVERYTHING ---
     metadata = {
         "artist": artist,
         "track": track,
@@ -41,5 +41,12 @@ def main():
     with open("metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
     
-    print(f"✅ metadata.json created for: {artist} - {track}")
-    print(f"📦 Playlist Item ID: {playlist_item_id}") # This will now show in logs
+    # --- LOUD LOGGING ---
+    print("--------------------------------------------------")
+    print(f"✅ METADATA GENERATED SUCCESSFULLY")
+    print(f"🎵 Track: {artist} - {track}")
+    print(f"🆔 Playlist Item ID: {playlist_item_id}")
+    print("--------------------------------------------------")
+
+if __name__ == "__main__":
+    main()
