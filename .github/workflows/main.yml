@@ -2,8 +2,7 @@ name: Phonk Reel Automation
 
 permissions:
   contents: write
-  workflows: write  # Add this line# Allows the bot to push to any branch
-
+  
 on:
   workflow_dispatch:
   push:
