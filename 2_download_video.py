@@ -35,35 +35,50 @@ def download():
             try: os.remove(f)
             except: pass
 
-    # --- NEW: STEP 3 - PRE-FETCH WARM-UP ---
-    if PREFETCH_LIST:
-        print(f"⚡ Starting background warm-up for {len(PREFETCH_LIST)} future reels...")
-        for url in PREFETCH_LIST:
-            # We fire these and forget; we don't wait for them
-            run_cmd(["rclone", "backend", "addurl", f"{REMOTE}:{REMOTE_PATH}", url])
-            print(f"  > Warm-up dispatched: {url}")
-
-    # --- STEP 4 - CHECK FOR INSTANT HIT OR DISPATCH ACTIVE ---
-    print(f"📡 Checking Cloud for active Video ID: {VIDEO_ID}...")
-    list_check = run_cmd(["rclone", "lsf", f"{REMOTE}:{REMOTE_PATH}"])
+    # --- STEP 3 & 4: SMART CLOUD DISPATCH ---
+    print(f"📡 Scanning Cloud storage for existing files...")
+    # Get a list of everything currently in the temp folder
+    cloud_files = run_cmd(["rclone", "lsf", f"{REMOTE}:{REMOTE_PATH}"]).stdout
     
+    # 1. Handle Pre-fetch URLs (Warm-up)
+    if PREFETCH_LIST:
+        for url in PREFETCH_LIST:
+            # Extract Video ID from URL to check if we already have it
+            p_vid_id = url.split("v=")[-1]
+            if p_vid_id in cloud_files:
+                print(f"  > Skip Warm-up: {p_vid_id} already in Cloud.")
+            else:
+                run_cmd(["rclone", "backend", "addurl", f"{REMOTE}:{REMOTE_PATH}", url])
+                print(f"  > Warm-up dispatched: {url}")
+
+    # 2. Handle Active Video
     file_name = None
-    # Look for a file in PikPak that contains our Video ID
-    for line in list_check.stdout.splitlines():
+    for line in cloud_files.splitlines():
         if VIDEO_ID in line:
             file_name = line
-            print(f"⏩ Instant Hit! Found pre-fetched file: {file_name}")
+            print(f"⏩ Instant Hit! {file_name} found in Cloud.")
             break
 
     if not file_name:
-        print(f"🆕 Not in cloud yet. Dispatching fresh request for: {VIDEO_URL}")
+        print(f"🆕 Active Video {VIDEO_ID} not found. Sending to PikPak...")
         send_res = run_cmd(["rclone", "backend", "addurl", f"{REMOTE}:{REMOTE_PATH}", VIDEO_URL])
         try:
             task_data = json.loads(send_res.stdout)
             file_name = task_data.get("file_name")
         except:
-            print("❌ PikPak Error during dispatch.")
-            sys.exit(1)
+            # If PikPak returns an error because the task is already active
+            # we try to find the filename again in a second
+            print("⚠️ PikPak task might already be active. Re-scanning...")
+            time.sleep(2)
+            new_check = run_cmd(["rclone", "lsf", f"{REMOTE}:{REMOTE_PATH}"])
+            for line in new_check.stdout.splitlines():
+                if VIDEO_ID in line:
+                    file_name = line
+                    break
+            
+            if not file_name:
+                print("❌ Failed to secure a filename for this task.")
+                sys.exit(1)
 
     # --- STEP 5 - POLLING LOOP ---
     print(f"⏳ Waiting for Cloud Muxing...")
