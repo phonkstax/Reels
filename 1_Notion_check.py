@@ -51,7 +51,7 @@ def delete_playlist_item(token, playlist_item_id):
         print(f"❌ Error during deletion: {e}")
 
 def check_notion_entry(video_id):
-    """Checks Notion to see if this specific Video ID has been processed as a Reel."""
+    """Checks Notion to see if this Video ID exists as a Reel."""
     if not NOTION_DB_ID or not NOTION_PAGE_ID or not NOTION_TOKEN:
         print("❌ Error: Notion configuration secrets are missing.")
         return False
@@ -89,12 +89,12 @@ def main():
     if not token: 
         sys.exit(1)
 
-    # 1. Fetch Top 3 Items from Playlist (1 for Action, 2 for Warm-up)
+    # 1. Fetch Top 2 Items (1 for Active, 1 for Pre-fetch)
     url = "https://www.googleapis.com/youtube/v3/playlistItems"
     params = {
         "part": "snippet,contentDetails", 
         "playlistId": PLAYLIST_ID, 
-        "maxResults": 3
+        "maxResults": 2 
     }
     r = requests.get(url, params=params, headers={"Authorization": f"Bearer {token}"}).json()
     
@@ -103,27 +103,26 @@ def main():
         print("❌ Playlist is empty.")
         sys.exit(1)
 
-    # 2. Setup the Active Item (Item #1)
+    # 2. Setup Active Item (Item #1)
     active_item = items[0]
     playlist_item_id = active_item.get('id') 
     vid_id = active_item['contentDetails']['videoId']
     
-    # 3. Check Notion for the Active Item
+    # 3. Check Notion for Active Item
     if check_notion_entry(vid_id):
         print(f"🚩 MATCH FOUND: {vid_id} is already in Notion.")
         delete_playlist_item(token, playlist_item_id)
         print("⏩ Stopping workflow. Duplicate removed from playlist.")
         sys.exit(1)
 
-    # 4. Collect Warm-up URLs (Items #2 and #3)
+    # 4. Collect 1 Pre-fetch URL (Item #2)
     prefetch_urls = []
     if len(items) > 1:
-        for extra in items[1:]:
-            extra_vid_id = extra['contentDetails']['videoId']
-            prefetch_urls.append(f"https://www.youtube.com/watch?v={extra_vid_id}")
-        print(f"⚡ Collected {len(prefetch_urls)} URLs for background pre-fetching.")
+        next_vid_id = items[1]['contentDetails']['videoId']
+        prefetch_urls.append(f"https://www.youtube.com/watch?v={next_vid_id}")
+        print(f"⚡ Queueing 1 URL for background pre-fetching: {next_vid_id}")
 
-    # 5. Process Active Track Metadata
+    # 5. Process Metadata
     raw_artist = active_item['snippet'].get('videoOwnerChannelTitle', 'Unknown')
     raw_track = active_item['snippet'].get('title', 'Unknown')
     artist, track = clean_name(raw_artist), clean_name(raw_track)
@@ -135,16 +134,16 @@ def main():
         "video_id": vid_id,
         "playlist_item_id": playlist_item_id, 
         "yt_url": f"https://www.youtube.com/watch?v={vid_id}",
-        "prefetch_urls": prefetch_urls  # To be used by 2_download_video.py
+        "prefetch_urls": prefetch_urls 
     }
     
     with open("metadata.json", "w") as f:
         json.dump(metadata, f, indent=4)
     
-    print("-" * 50)
-    print(f"✅ ACTIVE TRACK READY: {artist} - {track}")
-    print(f"🔗 Warm-up Queue: {len(prefetch_urls)} items")
-    print("-" * 50)
+    print("-" * 40)
+    print(f"✅ READY: {artist} - {track}")
+    print(f"🚀 Warm-up active for next song: {'Yes' if prefetch_urls else 'No'}")
+    print("-" * 40)
 
 if __name__ == "__main__":
     main()
