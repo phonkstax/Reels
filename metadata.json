@@ -1,8 +1,12 @@
 {
-    "title": "svlient - SHATTER!",
-    "artist": "svlient",
-    "track": "SHATTER!",
-    "video_id": "UZj3oSSEWqo",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci5DNUEzOUFFNkIyOUUzOTRC",
-    "yt_url": "https://www.youtube.com/watch?v=UZj3oSSEWqo"
+    "title": "74blade - JUMPED",
+    "artist": "74blade",
+    "track": "JUMPED",
+    "video_id": "18KTGPq1rzI",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci5BRjY4NjdBRjA5RTdCMUMx",
+    "yt_url": "https://www.youtube.com/watch?v=18KTGPq1rzI",
+    "prefetch_urls": [
+        "https://www.youtube.com/watch?v=Qcawj3O6t0U"
+    ],
+    "cloud_file_name": "JUMPED.webm"
 }

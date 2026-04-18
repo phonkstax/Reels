@@ -110,6 +110,6 @@ jobs:
           YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
         run: python 7_cleanup_playlist.py
 
-
-       
-        
+      - name: ☁️ Step 8 - Final PikPak Cloud Cleanup
+        if: success()
+        run: python 8_pikpak_cleanup.py
