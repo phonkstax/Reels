@@ -110,8 +110,6 @@ jobs:
           YTM_OAUTH_JSON: ${{ secrets.YTM_OAUTH_JSON }}
         run: python 7_cleanup_playlist.py
 
-      - name: 📦 Archive Final Video (GitHub Artifact)
-        if: always()
-        uses: actions/upload-artifact@v4
+
        
         
