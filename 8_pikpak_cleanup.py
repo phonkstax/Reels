@@ -1,45 +1,53 @@
 import os
 import json
 import subprocess
+import re
 
-def pattern_cleanup():
-    # 1. Load metadata to find the specific Video ID processed in this run
+def smart_cleanup():
+    # 1. Load metadata to get the Title/Artist
     if not os.path.exists("metadata.json"):
-        print("⚠️ metadata.json not found. Cleanup skipped.")
+        print("⚠️ metadata.json missing. Cleanup skipped.")
         return
 
     with open("metadata.json", "r") as f:
         meta = json.load(f)
 
-    # Use the unique Video ID (e.g., SVP1hF7hNxQ) as the search pattern
-    video_id = meta.get('video_id')
+    # We extract Title and Artist to create multiple search patterns
+    track_title = meta.get('track', '')
+    video_id = meta.get('video_id', '')
+    
     remote_name = "mypikpak"
     remote_path = "Download/temp/"
 
-    if not video_id:
-        print("⚠️ No video_id found in metadata. Cannot perform cleanup.")
+    # 2. Build a list of patterns to match
+    # We want to match the Track Title (e.g., AGUANTA) and the Video ID
+    patterns = []
+    if track_title:
+        # Clean title of special characters that might break rclone
+        clean_title = re.sub(r'[^\w\s]', '', track_title)
+        patterns.append(f"*{clean_title}*")
+    if video_id:
+        patterns.append(f"*{video_id}*")
+
+    if not patterns:
+        print("⚠️ No patterns found to match. Cleanup skipped.")
         return
 
-    print(f"🧹 Searching for all files containing ID: {video_id}")
-    
-    # 2. Use 'rclone delete' with an include pattern
-    # Pattern: *ID* matches 'Song_ID.webm', 'Song_ID(1).webm', etc.
-    remote_target = f"{remote_name}:{remote_path}"
-    pattern = f"*{video_id}*"
-    
-    # We use 'delete' with '--include' to target multiple matching files at once
-    cmd = [
-        "rclone", "delete", remote_target, 
-        "--include", pattern
-    ]
-    
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    print(f"🔎 Searching for files matching: {patterns}")
 
-    if res.returncode == 0:
-        print(f"🗑️ Successfully purged all versions of {video_id} (including duplicates).")
-    else:
-        # If no file was found, rclone might exit with an error; we log it but don't stop the job
-        print(f"ℹ️ Cleanup Note: {res.stderr.strip() if res.stderr else 'No files found to delete.'}")
+    # 3. Use rclone to delete specific matches only
+    for pattern in patterns:
+        cmd = [
+            "rclone", "delete", f"{remote_name}:{remote_path}",
+            "--include", pattern
+        ]
+        
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        
+        if res.returncode == 0:
+            print(f"🗑️ Purged files matching: {pattern}")
+        else:
+            print(f"❌ Error matching {pattern}: {res.stderr.strip()}")
 
 if __name__ == "__main__":
-    pattern_cleanup()
+    smart_cleanup()
