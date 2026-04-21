@@ -1,12 +1,11 @@
 {
-    "title": "dnvn - Calabria",
-    "artist": "dnvn",
-    "track": "Calabria",
-    "video_id": "xEw0yPa9lNU",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci40QkU3RjBCMjgzQUIzNjg2",
-    "yt_url": "https://www.youtube.com/watch?v=xEw0yPa9lNU",
+    "title": "wintercell - Mercenary",
+    "artist": "wintercell",
+    "track": "Mercenary",
+    "video_id": "33BR1CrAfRE",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci5GOUJEOERGNDg1N0QyNDA3",
+    "yt_url": "https://www.youtube.com/watch?v=33BR1CrAfRE",
     "prefetch_urls": [
-        "https://www.youtube.com/watch?v=33BR1CrAfRE"
-    ],
-    "cloud_file_name": "Calabria.webm"
+        "https://www.youtube.com/watch?v=iVodawbCO7k"
+    ]
 }
