@@ -1,12 +1,11 @@
 {
-    "title": "Vinsmoker - Bang Bang",
+    "title": "Vinsmoker - Sigma",
     "artist": "Vinsmoker",
-    "track": "Bang Bang",
-    "video_id": "FJLi-R-geE0",
-    "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci42QTlDMjkyRjNGMEYwQzcz",
-    "yt_url": "https://www.youtube.com/watch?v=FJLi-R-geE0",
+    "track": "Sigma",
+    "video_id": "KrX0BfKpvvk",
+    "playlist_item_id": "UEw4V0dZdDJmaGVuQ0puQkhGQktxdzhTWmwtb3lPMDNVci41MUY0NzFFRjMwMkI3RTI1",
+    "yt_url": "https://www.youtube.com/watch?v=KrX0BfKpvvk",
     "prefetch_urls": [
-        "https://www.youtube.com/watch?v=KrX0BfKpvvk"
-    ],
-    "cloud_file_name": "Bang Bang.webm"
+        "https://www.youtube.com/watch?v=rwBdaSfNCvg"
+    ]
 }
