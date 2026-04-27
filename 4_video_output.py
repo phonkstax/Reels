@@ -106,8 +106,8 @@ def make_phonk_edit():
     final_composition.write_videofile(TEMP_VIDEO, fps=30, codec="libx264", preset="ultrafast", audio=False)
 
     print("--- Stage 4: Merging Audio ---")
-    cmd = ["ffmpeg", "-i", TEMP_VIDEO, "-i", AUDIO_PATH, "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", final_output, "-y"]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# Change from 18 to 26 to reduce file size by ~30-40%
+cmd = ["ffmpeg", "-i", TEMP_VIDEO, "-i", AUDIO_PATH, "-c:v", "libx264", "-crf", "26", "-c:a", "aac", "-b:a", "128k", "-shortest", final_output, "-y"]    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     # Cleanup
     for f in [TEMP_VIDEO, BLUR_BG_PATH]:
