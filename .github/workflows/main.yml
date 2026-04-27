@@ -55,15 +55,16 @@ jobs:
 
     
 
-      - name: 🎬 Step 4 - Render Video
+      - name: 🎬 Step 4 - Render reel
         run: |
           rm -rf output/
-          mkdir -p output/
+          git add -A
           python3 4_reel_output.py
 
       - name: 🚀 Step 5 - Webhook & Force Push Video
         env:
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          WEBHOOK_REEL: ${{ secrets.WEBHOOK_REEL }}
+          WEBHOOK_VIDEO: ${{ secrets.WEBHOOK_VIDEO }}
         run: bash 5_webhook.sh
 
    
