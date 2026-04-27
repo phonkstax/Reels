@@ -90,7 +90,7 @@ jobs:
           git add -A
           python3 4_reel_output.py
 
-      - name: 🎬 Step 4 - Render reel
+      - name: 🎬 Step 4 - Render video
         run: |
           rm -rf output/
           git add -A
