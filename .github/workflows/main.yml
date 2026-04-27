@@ -58,8 +58,11 @@ jobs:
         run: |
           rm -rf output/
           mkdir -p output/
-          bash 4_video_output.sh
+          bash 4_video_output.py
 
-
+      - name: 🚀 Step 5 - Webhook & Force Push Video
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: bash 5_webhook.sh
 
    
