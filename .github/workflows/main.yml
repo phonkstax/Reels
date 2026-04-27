@@ -12,11 +12,11 @@ on:
     - cron: '0 5 * * *'
     - cron: '0 6 * * *'
     - cron: '0 7 * * *'
-    - cron: '0 8 * * *'
+  
 jobs:
   render-and-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # Stop the job if it hangs for more than 30 mins
+    timeout-minutes: 30  # Stop the job if it hangs for more than 30 mins
     
     steps:
       - name: 📂 Checkout Repository
@@ -29,10 +29,11 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 📦 Install Python Dependencies
+      - name: 🛠️ Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install requests
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install librosa numpy moviepy
 
       - name: Step 1 - Notion & Playlist Check
         env:
@@ -83,16 +84,24 @@ jobs:
       - name: 🔉 Step 3.5 - Extract Best Part
         run: python 3.5_trim_audio.py
 
-      - name: 🎬 Step 4 - Render Video
+      - name: 🎬 Step 4 - Render reel
         run: |
           rm -rf output/
-          mkdir -p output/
-          bash 4_output.sh
+          git add -A
+          python3 4_reel_output.py
+
+      - name: 🎬 Step 4 - Render reel
+        run: |
+          rm -rf output/
+          git add -A
+          python3 4_video_output.py
 
       - name: 🚀 Step 5 - Webhook & Force Push Video
         env:
-          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+          WEBHOOK_REEL: ${{ secrets.WEBHOOK_REEL }}
+          WEBHOOK_VIDEO: ${{ secrets.WEBHOOK_VIDEO }}
         run: bash 5_webhook.sh
+
 
       - name: 📝 Step 6 - Update Notion Database
         if: success()
