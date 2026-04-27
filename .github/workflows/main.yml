@@ -59,7 +59,7 @@ jobs:
         run: |
           rm -rf output/
           mkdir -p output/
-          python3 4_video_output.py
+          python3 4_reel_output.py
 
       - name: 🚀 Step 5 - Webhook & Force Push Video
         env:
