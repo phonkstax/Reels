@@ -92,8 +92,6 @@ jobs:
 
       - name: 🎬 Step 4 - Render video
         run: |
-          rm -rf output/
-          git add -A
           python3 4_video_output.py
 
       - name: 🚀 Step 5 - Webhook & Force Push Video
