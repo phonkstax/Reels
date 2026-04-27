@@ -61,6 +61,12 @@ jobs:
           git add -A
           python3 4_reel_output.py
 
+      - name: 🎬 Step 4 - Render reel
+        run: |
+          rm -rf output/
+          git add -A
+          python3 4_video_output.py
+
       - name: 🚀 Step 5 - Webhook & Force Push Video
         env:
           WEBHOOK_REEL: ${{ secrets.WEBHOOK_REEL }}
