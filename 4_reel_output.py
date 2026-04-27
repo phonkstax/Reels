@@ -11,7 +11,7 @@ import moviepy.video.fx as vfx
 AUDIO_PATH = "./assets/trim_audio/trim_audio.mp3"
 LOGO_PATH = "./assets/spotify.png"
 METADATA_PATH = "metadata.json"
-OUT_DIR = "./output"
+OUT_DIR = "./output/reel"
 
 # Temporary files
 TEMP_VIDEO = "./temp_visual.mp4"
