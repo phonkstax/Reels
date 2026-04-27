@@ -1,0 +1,65 @@
+name: Phonk Reel Automation
+
+permissions:
+  contents: write
+  
+on:
+  workflow_dispatch:
+  push:
+   
+jobs:
+  render-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10  # Stop the job if it hangs for more than 30 mins
+    
+    steps:
+      - name: 📂 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+    
+          
+
+      - name: 📝 Commit and Push Metadata (Early Save)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add -f metadata.json
+          
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to metadata.json"
+          else
+            git commit -m "Update metadata for new track [skip ci]"
+            # DYNAMIC BRANCH PUSH: Works for main, beta, or any other branch
+            git push origin ${{ github.ref_name }}
+          fi
+
+      - name: 🛠️ Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg jq bc
+          sudo -v && curl https://rclone.org/install.sh | sudo bash
+
+    
+
+      - name: 🎬 Step 4 - Render Video
+        run: |
+          rm -rf output/
+          mkdir -p output/
+          bash 4_video_output.sh
+
+
+
+   
