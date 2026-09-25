@@ -5,6 +5,7 @@ set -e
 TMP=$(mktemp -d)
 INPUT_DIR="./reels"
 AUDIO_DIR="./audio"
+QUOTES_FILE="./assets/quotes.txt"
 LOGO_PATH="./assets/spotify.png"
 OUTPUT_DIR="./output"
 
@@ -24,11 +25,37 @@ if [ -z "$AUDIO_FILE" ]; then
     exit 1
 fi
 
-# --- 3. MERGE CLIPS ---
+# --- 3. PICK RANDOM QUOTE FOR FILE NAME ONLY ---
+TOTAL=$(grep -cve '^[[:space:]]*$' "$QUOTES_FILE")
+
+if [ "$TOTAL" -eq 0 ]; then
+    echo "❌ No quotes found"
+    exit 1
+fi
+
+line=$(shuf -i 1-"$TOTAL" -n 1)
+raw=$(sed -n "${line}p" "$QUOTES_FILE" | \
+    perl -pe 's/[^[:ascii:]]//g; s/[\x00-\x1f\x7f]//g' | xargs)
+
+# Clean quote for filename
+safe_name=$(echo "$raw" | \
+    tr -cd '[:alnum:] ' | \
+    cut -c1-50 | \
+    xargs)
+
+url_filename="${safe_name// /_}.mp4"
+out_file="$OUTPUT_DIR/$url_filename"
+
+echo "📝 Selected quote for filename: $raw"
+echo "📁 Output file: $url_filename"
+
+# --- 4. MERGE CLIPS ---
 echo "🎬 Step 1: Processing Clips..."
 
 i=1
+
 for f in "${FILES[@]}"; do
+
     ffmpeg -i "$f" -t 1 \
         -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,fps=30" \
         -c:v libx264 \
@@ -45,7 +72,8 @@ done
 
 MERGED_RAW="$TMP/merged_raw.mp4"
 
-ffmpeg -f concat \
+ffmpeg \
+    -f concat \
     -safe 0 \
     -i "$TMP/list.txt" \
     -c copy \
@@ -54,7 +82,7 @@ ffmpeg -f concat \
 
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$MERGED_RAW")
 
-# --- 4. APPLY LOGO ONLY ---
+# --- 5. APPLY LOGO ONLY ---
 echo "🎨 Step 2: Applying Spotify Logo (Duration: ${DUR}s)..."
 
 logo_start=$(echo "$DUR" | awk '{print $1 / 2}')
@@ -79,18 +107,11 @@ ffmpeg \
     "$VISUAL_MASTER" \
     -y -loglevel warning
 
-# --- 5. FINAL AUDIO & RENAMING ---
+# --- 6. FINAL AUDIO ---
 echo "🎵 Step 3: Adding Audio..."
 
 FADE_VAL=$(echo "$DUR" | awk '{print ($1 > 2) ? $1 - 2 : 0}')
 
-# Use audio filename as output name
-safe_name=$(basename "$AUDIO_FILE" .mp3 | tr -cd '[:alnum:] ' | cut -c1-50 | xargs)
-
-url_filename="${safe_name// /_}.mp4"
-out_file="$OUTPUT_DIR/$url_filename"
-
-# --- 6. FINAL MERGE ---
 ffmpeg \
     -i "$VISUAL_MASTER" \
     -i "$AUDIO_FILE" \
@@ -127,11 +148,13 @@ if [ -f "$out_file" ]; then
     RAW_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${CURRENT_BRANCH}/output/${url_filename}"
 
     if [ -n "$GITHUB_ACTIONS" ]; then
+
         echo "⚙️ Force pushing to $CURRENT_BRANCH..."
 
         git commit -m "Refresh Reel: $safe_name" || git commit --amend --no-edit
 
         git push origin "$CURRENT_BRANCH" --force
+
     fi
 
     # --- 8. WEBHOOK ---
@@ -154,11 +177,14 @@ EOF
             "$WEBHOOK_URL"
 
         echo -e "\n✨ Process Complete."
+
     fi
 
     echo "-----------------------------------------------"
 
 else
+
     echo "❌ Error: Final video file was not created."
     exit 1
+
 fi
