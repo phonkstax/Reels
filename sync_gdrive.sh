@@ -4,7 +4,7 @@ set -e
 # --- CONFIGURATION ---
 # Format: "DriveFolderName:GithubPath"
 # Example: "My_Reels:videos music_folder:assets/audio"
-MAPPINGS="audio:Audio/phonkstax reels/phonkstax:reels"
+MAPPINGS="Audio/phonkstax:audio reels/phonkstax:reels"
 
 echo "🔐 Setting up Path-Specific Smart Sync..."
 
